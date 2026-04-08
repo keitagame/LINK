@@ -39,13 +39,17 @@ height:89vh;
 .nav-list li a:hover {
   background-color: #555;
 }
-
+button{
+background:none;
+border:none;
+color:white;
+}
     </style>
   </head>
   <body>
   <nav class="navbar">
   <ul class="nav-list">
-    <li class="nav-item"><a href="#">編集</a></li>
+    <li class="nav-item"><a href="#"><button id="open">ファイルを開く</button></a></li>
     <li><a href="#">細かな編集</a></li>
     <li><a href="#">対話モード</a></li>
     <li><a href="#">バイナリモード</a></li>
@@ -54,6 +58,14 @@ height:89vh;
 
   <div id="editor"></div>
 <div style="background:teal; width:100vw; height:40px;"></div>
+<script>
+document.getElementById("open").onclick = async () => {
+  const [handle] = await window.showOpenFilePicker();
+  const file = await handle.getFile();
+  const text = await file.text();
+  console.log(text);
+};
+</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
   <script>
     require.config({
