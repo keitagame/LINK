@@ -33,7 +33,7 @@
 }
 #editor{
 width:100vw;
-height:89vh;
+height:100%;
 }
 /* ホバー時の色変化 */
 .nav-list li a:hover {
@@ -45,9 +45,14 @@ background:none;
 border:none;
 color:white;
 }
+.m{
+position: relative;
+height:100vh;
+}
     </style>
   </head>
   <body>
+<div class="m">
   <nav class="navbar">
   <ul class="nav-list">
     <li class="nav-item"><a href="#"><button id="open">ファイルを開く</button></a></li>
@@ -58,7 +63,8 @@ color:white;
 </nav>
 
   <div id="editor"></div>
-<div style="background:teal; width:100vw; height:40px;"></div>
+<div style="background:teal; width:100vw; height:20px; color:white;position: absolute;bottom: 0;z-index:10;">通常</div>
+</div>
 <script>
 
 </script>
