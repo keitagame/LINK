@@ -49,6 +49,19 @@ color:white;
 position: relative;
 height:100vh;
 }
+.edit{
+width:100vw;
+height:100vh;
+display:flex;
+}
+.filem{
+width:300px;
+}
+.tool{
+width:60px;
+height:100%;
+border-right:1px  solid rgb(78, 78, 78);
+}
     </style>
   </head>
   <body>
@@ -61,8 +74,11 @@ height:100vh;
     <li><a href="#">バイナリモード</a></li>
   </ul>
 </nav>
-
+<div class="edit">
+<div class="tool"></div>
+<div class="filem"></div>
   <div id="editor"></div>
+</div>
 <div style="background:teal; width:100vw; height:20px; color:white;position: absolute;bottom: 0;z-index:10;">通常</div>
 </div>
 <script>
