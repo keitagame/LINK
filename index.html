@@ -64,6 +64,11 @@ color:white;
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
   <script>
+const extto = {
+"js":"javascript",
+"html":"html",
+"py":"python"
+}
     require.config({
       paths: {
         'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs'
@@ -91,6 +96,9 @@ color:white;
 document.getElementById("open").onclick = async () => {
   const [handle] = await window.showOpenFilePicker();
   const file = await handle.getFile();
+const ext = file.name.split('.').pop();
+let lang = extto[ext];
+monaco.editor.setModelLanguage(editor.getModel(), lang);
   const text = await file.text();
   console.log(text);
   editor.setValue(text);
