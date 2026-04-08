@@ -5,10 +5,48 @@
     <title>LINK</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
-     
+      body{
+        background:black;
+        margin:0;
+      }
+      nav{
+        border-bottom:1px solid rgb(78, 78, 78);
+        padding:1px;
+        background-color: #000000;
+      }
+     /* リストの点（・）を消して横並びにする */
+.nav-list {
+  font-size:10px;
+  display: flex;
+  list-style: none;
+  padding: 1px;
+  background-color: #000000;
+}
+
+/* リンクの間隔と色を整える */
+.nav-list li a {
+  display: block;
+  padding: 5px 20px;
+  color: white;
+  text-decoration: none;
+}
+
+/* ホバー時の色変化 */
+.nav-list li a:hover {
+  background-color: #555;
+}
+
     </style>
   </head>
   <body>
-  
+  <nav class="navbar">
+  <ul class="nav-list">
+    <li class="nav-item"><a href="#">編集</a></li>
+    <li><a href="#">細かな編集</a></li>
+    <li><a href="#">対話モード</a></li>
+    <li><a href="#">バイナリモード</a></li>
+  </ul>
+</nav>
+
   </body>
 </html>
