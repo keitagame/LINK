@@ -1,149 +1,1101 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <title>LINK</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-      body{
-        overflow:hidden;
-        background:rgb(0, 0, 0);
-        margin:0;
-      }
-      nav{
-        border-bottom:1px solid rgb(78, 78, 78);
-        padding:1px;
-        background-color: #000000;
-      }
-     /* リストの点（・）を消して横並びにする */
-.nav-list {
-  font-size:10px;
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>フォルマント音声合成エンジン</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DotGothic16&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg:     #03080a;
+  --surf:   #070f12;
+  --bdr:    #0d2028;
+  --ph:     #00e5ff;
+  --ph2:    #00ffaa;
+  --phdim:  #0a3a45;
+  --text:   #9adce8;
+  --muted:  #2a6070;
+  --red:    #ff4466;
+  --amber:  #ffcc00;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
   display: flex;
-  list-style: none;
-  padding: 1px;
-  background-color: #000000;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem 2rem;
+  font-size: 13px;
 }
 
-/* リンクの間隔と色を整える */
-.nav-list li a {
-  display: block;
-  padding: 5px 20px;
-  color: white;
-  text-decoration: none;
+/* Scanlines */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px);
+  pointer-events: none;
+  z-index: 999;
 }
-#editor{
-width:100vw;
-height:100%;
+
+.container { width: 100%; max-width: 720px; }
+
+/* Header */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--bdr);
+  padding-bottom: 0.8rem;
+  margin-bottom: 1rem;
 }
-/* ホバー時の色変化 */
-.nav-list li a:hover {
-  background-color: #555;
+
+.title-block {}
+.sys-id { font-size: 0.6rem; letter-spacing: 0.4em; color: var(--muted); margin-bottom: 2px; }
+h1 {
+  font-family: 'DotGothic16', monospace;
+  font-size: 1.5rem;
+  color: var(--ph);
+  text-shadow: 0 0 18px rgba(0,229,255,0.45);
+  letter-spacing: 0.05em;
 }
-button{
-font-size:10px;
-background:none;
-border:none;
-color:white;
+.build-info { font-size: 0.58rem; color: var(--muted); text-align: right; line-height: 1.7; }
+
+/* Scope panels */
+.scope-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 6px;
 }
-.m{
-position: relative;
-height:100vh;
+
+.scope-panel {
+  background: #020c10;
+  border: 1px solid var(--bdr);
+  position: relative;
+  padding: 4px;
 }
-.edit{
-width:100vw;
-height:100vh;
-display:flex;
+
+.scope-tag {
+  position: absolute;
+  top: 5px; left: 8px;
+  font-size: 0.55rem;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+  z-index: 2;
 }
-.filem{
-width:300px;
+
+.scope-tag.right { left: auto; right: 8px; }
+
+canvas { display: block; width: 100%; }
+#wCanvas { height: 90px; }
+#sCanvas { height: 90px; }
+
+/* Formant meters */
+.formant-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
 }
-.tool{
-width:60px;
-height:100%;
-border-right:1px  solid rgb(78, 78, 78);
+
+.fmt-meter {
+  flex: 1;
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  padding: 5px 8px;
+  position: relative;
+  overflow: hidden;
 }
-    </style>
-  </head>
-  <body>
-<div class="m">
-  <nav class="navbar">
-  <ul class="nav-list">
-    <li class="nav-item"><a href="#"><button id="open">ファイルを開く</button></a></li>
-    <li><a href="#">細かな編集</a></li>
-    <li><a href="#">対話モード</a></li>
-    <li><a href="#">バイナリモード</a></li>
-  </ul>
-</nav>
-<div class="edit">
-<div class="tool"></div>
-<div class="filem"></div>
-  <div id="editor"></div>
+
+.fmt-meter::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: var(--pct, 0%);
+  height: 2px;
+  background: var(--ph);
+  transition: width 0.05s linear;
+}
+
+.fmt-label { font-size: 0.55rem; letter-spacing: 0.2em; color: var(--muted); }
+.fmt-val   { font-size: 0.95rem; color: var(--ph); }
+
+/* Mora display */
+.mora-panel {
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  padding: 8px 10px;
+  min-height: 52px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-content: flex-start;
+}
+
+.mora-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 7px;
+  border: 1px solid var(--phdim);
+  color: var(--muted);
+  font-family: 'DotGothic16', monospace;
+  transition: all 0.06s;
+  position: relative;
+}
+
+.mora-glyph { font-size: 1rem; line-height: 1.2; }
+.mora-phon  { font-size: 0.45rem; color: var(--muted); letter-spacing: 0.1em; line-height: 1; margin-top: 1px; opacity: 0.7; font-family: 'Share Tech Mono', monospace; }
+
+.mora-chip.active {
+  border-color: var(--ph);
+  color: var(--ph);
+  background: rgba(0,229,255,0.06);
+  box-shadow: 0 0 10px rgba(0,229,255,0.3);
+}
+.mora-chip.active .mora-phon { color: var(--ph); opacity: 1; }
+.mora-chip.done { border-color: #0a2028; color: #0a2028; }
+.mora-chip.done .mora-glyph { color: var(--phdim); }
+.mora-chip.done .mora-phon  { opacity: 0.3; }
+
+.mora-empty { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.2em; align-self: center; }
+
+/* Text input */
+.row-label { font-size: 0.55rem; letter-spacing: 0.3em; color: var(--muted); margin-bottom: 4px; display: block; }
+
+textarea {
+  width: 100%;
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  color: var(--text);
+  font-family: 'DotGothic16', monospace;
+  font-size: 1rem;
+  padding: 8px 10px;
+  resize: vertical;
+  min-height: 68px;
+  outline: none;
+  margin-bottom: 6px;
+  transition: border-color 0.2s;
+  line-height: 1.6;
+}
+textarea:focus { border-color: var(--phdim); }
+textarea::placeholder { color: var(--phdim); }
+
+/* Controls */
+.ctrl-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.ctrl-box {
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  padding: 8px 8px 6px;
+}
+
+.ctrl-name { font-size: 0.5rem; letter-spacing: 0.25em; color: var(--muted); display: block; margin-bottom: 3px; }
+.ctrl-val  { font-size: 0.95rem; color: var(--ph2); display: block; margin-bottom: 6px; }
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--bdr);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px;
+  background: var(--ph2);
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(0,255,170,0.5);
+}
+
+/* Buttons */
+.btn-row { display: flex; gap: 4px; margin-bottom: 6px; }
+
+button {
+  flex: 1;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  padding: 10px 8px;
+  border: 1px solid var(--muted);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.12s;
+  text-transform: uppercase;
+}
+button.primary { border-color: var(--ph2); color: var(--ph2); background: rgba(0,255,170,0.04); }
+button.primary:hover { background: rgba(0,255,170,0.1); }
+button.danger  { border-color: var(--red); color: var(--red); }
+button.danger:hover { background: rgba(255,68,102,0.08); }
+button:hover { background: rgba(154,220,232,0.05); }
+button:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.55rem;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+  border-top: 1px solid var(--bdr);
+  padding-top: 6px;
+}
+
+.led {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.led.on { background: var(--ph2); box-shadow: 0 0 6px var(--ph2); animation: blink 1.2s step-end infinite; }
+.led.err { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+@keyframes blink { 50% { opacity: 0.2; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="title-block">
+      <p class="sys-id">SYS: KLATT-JP-01 // WEB AUDIO API</p>
+      <h1>フォルマント音声合成</h1>
+    </div>
+    <div class="build-info">
+      METHOD: PARALLEL FORMANT<br>
+      SOURCE: OSC + NOISE<br>
+      FILTERS: F1·F2·F3 BPF
+    </div>
+  </header>
+
+  <!-- Oscilloscope + Spectrum -->
+  <div class="scope-wrap">
+    <div class="scope-panel">
+      <span class="scope-tag">TIME DOMAIN</span>
+      <span class="scope-tag right" id="rmsDisplay">RMS: —</span>
+      <canvas id="wCanvas"></canvas>
+    </div>
+    <div class="scope-panel">
+      <span class="scope-tag">SPECTRUM (0–8kHz)</span>
+      <canvas id="sCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Formant frequency meters -->
+  <div class="formant-row">
+    <div class="fmt-meter" id="f1meter">
+      <div class="fmt-label">F1 (低母音)</div>
+      <div class="fmt-val" id="f1disp">— Hz</div>
+    </div>
+    <div class="fmt-meter" id="f2meter">
+      <div class="fmt-label">F2 (前後)</div>
+      <div class="fmt-val" id="f2disp">— Hz</div>
+    </div>
+    <div class="fmt-meter" id="f3meter">
+      <div class="fmt-label">F3 (声道)</div>
+      <div class="fmt-val" id="f3disp">— Hz</div>
+    </div>
+    <div class="fmt-meter">
+      <div class="fmt-label">F0 (基本)</div>
+      <div class="fmt-val" id="f0disp">— Hz</div>
+    </div>
+  </div>
+
+  <!-- Mora display -->
+  <div class="mora-panel" id="moraPanel">
+    <span class="mora-empty">テキストを入力 → 合成開始</span>
+  </div>
+
+  <!-- Text input -->
+  <span class="row-label">INPUT // ひらがな・カタカナ対応</span>
+  <textarea id="textIn" placeholder="こんにちは、わたしはフォルマント合成エンジンです。">こんにちは、わたしはフォルマント音声合成エンジンです。</textarea>
+
+  <!-- Controls -->
+  <div class="ctrl-grid">
+    <div class="ctrl-box">
+      <span class="ctrl-name">基本周波数 F0</span>
+      <span class="ctrl-val" id="vF0">120Hz</span>
+      <input type="range" id="sF0" min="70" max="350" value="120" step="1">
+    </div>
+    <div class="ctrl-box">
+      <span class="ctrl-name">速度</span>
+      <span class="ctrl-val" id="vSpd">1.00×</span>
+      <input type="range" id="sSpd" min="0.3" max="3.0" value="1.0" step="0.05">
+    </div>
+    <div class="ctrl-box">
+      <span class="ctrl-name">音量</span>
+      <span class="ctrl-val" id="vVol">0.80</span>
+      <input type="range" id="sVol" min="0" max="1" value="0.8" step="0.02">
+    </div>
+    <div class="ctrl-box">
+      <span class="ctrl-name">モーラ時間</span>
+      <span class="ctrl-val" id="vDur">140ms</span>
+      <input type="range" id="sDur" min="60" max="400" value="140" step="5">
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="primary" id="btnSpeak">▶ 合成開始</button>
+    <button class="danger"  id="btnStop" disabled>■ 停止</button>
+  </div>
+
+  <div class="status-bar">
+    <span><span class="led" id="led"></span><span id="statusTxt">READY</span></span>
+    <span id="moraInfo">— MORA · — SEC</span>
+  </div>
+
 </div>
-<div style="background:teal; width:100vw; height:20px; color:white;position: absolute;bottom: 0;z-index:10;">通常</div>
-</div>
+
 <script>
+// ═══════════════════════════════════════════════════════
+// ①  テキスト処理  TEXT → MORA SEQUENCE
+// ═══════════════════════════════════════════════════════
 
-</script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
-  <script>
-const extto = {
-"js":"javascript",
-"html":"html",
-"py":"python"
+// カタカナ→ひらがな
+function toHira(s) {
+  return s.replace(/[\u30A1-\u30F6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
 }
-    require.config({
-      paths: {
-        'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs'
-      }
+
+// モーラ表 (2文字複合 → 1文字の順で定義)
+const MORA_TABLE = (() => {
+  const T = {};
+  const def = (k, c, v) => T[k] = { c, v };
+
+  // 複合モーラ (2 chars)
+  [['きゃ','ky','a'],['きゅ','ky','u'],['きょ','ky','o'],
+   ['しゃ','sh','a'],['しゅ','sh','u'],['しょ','sh','o'],
+   ['ちゃ','ch','a'],['ちゅ','ch','u'],['ちょ','ch','o'],
+   ['にゃ','ny','a'],['にゅ','ny','u'],['にょ','ny','o'],
+   ['ひゃ','hy','a'],['ひゅ','hy','u'],['ひょ','hy','o'],
+   ['みゃ','my','a'],['みゅ','my','u'],['みょ','my','o'],
+   ['りゃ','ry','a'],['りゅ','ry','u'],['りょ','ry','o'],
+   ['ぎゃ','gy','a'],['ぎゅ','gy','u'],['ぎょ','gy','o'],
+   ['じゃ','j','a'], ['じゅ','j','u'], ['じょ','j','o'],
+   ['びゃ','by','a'],['びゅ','by','u'],['びょ','by','o'],
+   ['ぴゃ','py','a'],['ぴゅ','py','u'],['ぴょ','py','o'],
+  ].forEach(([k,c,v]) => def(k,c,v));
+
+  // 単モーラ
+  [['あ','','a'],['い','','i'],['う','','u'],['え','','e'],['お','','o'],
+   ['か','k','a'],['き','k','i'],['く','k','u'],['け','k','e'],['こ','k','o'],
+   ['さ','s','a'],['し','sh','i'],['す','s','u'],['せ','s','e'],['そ','s','o'],
+   ['た','t','a'],['ち','ch','i'],['つ','ts','u'],['て','t','e'],['と','t','o'],
+   ['な','n','a'],['に','n','i'],['ぬ','n','u'],['ね','n','e'],['の','n','o'],
+   ['は','h','a'],['ひ','h','i'],['ふ','f','u'],['へ','h','e'],['ほ','h','o'],
+   ['ま','m','a'],['み','m','i'],['む','m','u'],['め','m','e'],['も','m','o'],
+   ['や','y','a'],['ゆ','y','u'],['よ','y','o'],
+   ['ら','r','a'],['り','r','i'],['る','r','u'],['れ','r','e'],['ろ','r','o'],
+   ['わ','w','a'],['を','w','o'],['ん','N',''],
+   ['が','g','a'],['ぎ','g','i'],['ぐ','g','u'],['げ','g','e'],['ご','g','o'],
+   ['ざ','z','a'],['じ','j','i'],['ず','z','u'],['ぜ','z','e'],['ぞ','z','o'],
+   ['だ','d','a'],['ぢ','j','i'],['づ','z','u'],['で','d','e'],['ど','d','o'],
+   ['ば','b','a'],['び','b','i'],['ぶ','b','u'],['べ','b','e'],['ぼ','b','o'],
+   ['ぱ','p','a'],['ぴ','p','i'],['ぷ','p','u'],['ぺ','p','e'],['ぽ','p','o'],
+  ].forEach(([k,c,v]) => def(k,c,v));
+
+  return T;
+})();
+
+function parseText(text) {
+  text = toHira(text).replace(/[、。！？…,. ]/g, '　');
+  const morae = [];
+  let i = 0;
+  while (i < text.length) {
+    const two = text.slice(i, i+2);
+    if (MORA_TABLE[two]) {
+      morae.push({ ...MORA_TABLE[two], glyph: two }); i += 2;
+    } else if (MORA_TABLE[text[i]]) {
+      morae.push({ ...MORA_TABLE[text[i]], glyph: text[i] }); i++;
+    } else if (text[i] === 'っ') {
+      morae.push({ c: 'Q',   v: '',  glyph: 'っ' }); i++;
+    } else if (text[i] === 'ー') {
+      morae.push({ c: ':',   v: '',  glyph: 'ー' }); i++;
+    } else if (text[i] === '　' || text[i] === ' ') {
+      morae.push({ c: 'pau', v: '',  glyph: '□' }); i++;
+    } else {
+      i++; // skip unknown
+    }
+  }
+  return morae;
+}
+
+// ═══════════════════════════════════════════════════════
+// ②  音響データ  ACOUSTIC DATA
+// ═══════════════════════════════════════════════════════
+
+// 母音フォルマント周波数 [F1, F2, F3] Hz  (日本語)
+const VF = {
+  a: [850, 1250, 2800],
+  i: [270, 2300, 3000],
+  u: [380,  950, 2650],   // 日本語の /u/ は非円唇・中舌
+  e: [550, 1900, 2500],
+  o: [550,  900, 2700],
+  _: [500, 1500, 2500],   // 中性・シュワ
+  N: [300,  900, 2200],   // 鼻音
+};
+
+// フォルマント帯域幅 [BW1, BW2, BW3]
+const FB = [90, 140, 210];
+
+// 子音プロパティ
+// type: stop|vstop|fric|vfric|affc|nasal|approx|none|silent
+const CP = {
+  '':   { type:'none',   voiced:1,    noise:0,    dur:0,     ff:0,    fq:1 },
+  k:    { type:'stop',   voiced:0,    noise:0.5,  dur:0.045, ff:3000, fq:0.8 },
+  t:    { type:'stop',   voiced:0,    noise:0.5,  dur:0.045, ff:4000, fq:0.9 },
+  p:    { type:'stop',   voiced:0,    noise:0.4,  dur:0.04,  ff:800,  fq:0.7 },
+  g:    { type:'vstop',  voiced:0.9,  noise:0.2,  dur:0.035, ff:2000, fq:0.8 },
+  d:    { type:'vstop',  voiced:0.9,  noise:0.2,  dur:0.035, ff:3000, fq:0.9 },
+  b:    { type:'vstop',  voiced:0.9,  noise:0.2,  dur:0.035, ff:600,  fq:0.7 },
+  s:    { type:'fric',   voiced:0,    noise:1,    dur:0.07,  ff:5500, fq:1.5 },
+  sh:   { type:'fric',   voiced:0,    noise:1,    dur:0.07,  ff:3600, fq:1.8 },
+  ts:   { type:'affc',   voiced:0,    noise:0.9,  dur:0.055, ff:5000, fq:1.4 },
+  ch:   { type:'affc',   voiced:0,    noise:0.9,  dur:0.055, ff:3800, fq:1.6 },
+  z:    { type:'vfric',  voiced:0.4,  noise:0.85, dur:0.055, ff:4500, fq:1.3 },
+  j:    { type:'vfric',  voiced:0.4,  noise:0.75, dur:0.055, ff:3200, fq:1.5 },
+  h:    { type:'fric',   voiced:0,    noise:0.45, dur:0.04,  ff:2500, fq:0.9 },
+  f:    { type:'fric',   voiced:0,    noise:0.9,  dur:0.055, ff:7000, fq:1.1 },
+  m:    { type:'nasal',  voiced:1,    noise:0,    dur:0.04,  ff:0,    fq:1 },
+  n:    { type:'nasal',  voiced:1,    noise:0,    dur:0.04,  ff:0,    fq:1 },
+  ny:   { type:'nasal',  voiced:1,    noise:0,    dur:0.04,  ff:0,    fq:1 },
+  N:    { type:'nasal',  voiced:1,    noise:0,    dur:0.09,  ff:0,    fq:1 },
+  r:    { type:'approx', voiced:1,    noise:0,    dur:0.03,  ff:0,    fq:1 },
+  y:    { type:'approx', voiced:1,    noise:0,    dur:0.025, ff:0,    fq:1 },
+  w:    { type:'approx', voiced:1,    noise:0,    dur:0.025, ff:0,    fq:1 },
+  ky:   { type:'stop',   voiced:0,    noise:0.5,  dur:0.045, ff:3200, fq:0.9 },
+  gy:   { type:'vstop',  voiced:0.9,  noise:0.2,  dur:0.035, ff:2200, fq:0.9 },
+  hy:   { type:'fric',   voiced:0,    noise:0.45, dur:0.04,  ff:2800, fq:0.9 },
+  my:   { type:'nasal',  voiced:1,    noise:0,    dur:0.04,  ff:0,    fq:1 },
+  ry:   { type:'approx', voiced:1,    noise:0,    dur:0.03,  ff:0,    fq:1 },
+  by:   { type:'vstop',  voiced:0.9,  noise:0.2,  dur:0.035, ff:700,  fq:0.7 },
+  py:   { type:'stop',   voiced:0,    noise:0.4,  dur:0.04,  ff:900,  fq:0.7 },
+  Q:    { type:'stop',   voiced:0,    noise:0,    dur:0.08,  ff:0,    fq:1 },
+  ':':  { type:'none',   voiced:1,    noise:0,    dur:0,     ff:0,    fq:1 },
+  pau:  { type:'silent', voiced:0,    noise:0,    dur:0.16,  ff:0,    fq:1 },
+};
+
+// ═══════════════════════════════════════════════════════
+// ③  フォルマント合成エンジン  SYNTHESIS ENGINE
+// ═══════════════════════════════════════════════════════
+
+class FormantEngine {
+  constructor() {
+    this.ac       = null;
+    this.analyser = null;
+    this.running  = false;
+    // exposed for UI meters
+    this.currentFormants = [0, 0, 0];
+    this.currentF0 = 0;
+  }
+
+  _createNoise(ac, duration) {
+    const len = Math.ceil(ac.sampleRate * duration);
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d   = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return buf;
+  }
+
+  _buildGraph(ac) {
+    // ── Excitation sources ──────────────────────────────
+    const osc = ac.createOscillator();
+    osc.type = 'sawtooth';
+
+    const noiseBuf = this._createNoise(ac, 4.0);
+    const noise    = ac.createBufferSource();
+    noise.buffer   = noiseBuf;
+    noise.loop     = true;
+
+    // ── Gain nodes ──────────────────────────────────────
+    const vGain  = ac.createGain(); vGain.gain.value  = 0;  // voiced
+    const nGain  = ac.createGain(); nGain.gain.value  = 0;  // noise
+
+    // ── Pre-emphasis (spectral tilt correction) ──────────
+    const preEmph = ac.createBiquadFilter();
+    preEmph.type  = 'highshelf';
+    preEmph.frequency.value = 1200;
+    preEmph.gain.value      = 4;
+
+    // ── Fricative bandpass (shapes unvoiced noise) ───────
+    const fricBP = ac.createBiquadFilter();
+    fricBP.type  = 'bandpass';
+    fricBP.frequency.value = 4000;
+    fricBP.Q.value         = 1.5;
+
+    // ── 3 Formant filters (parallel bank) ───────────────
+    const fmts = [0,1,2].map(i => {
+      const f = ac.createBiquadFilter();
+      f.type  = 'bandpass';
+      f.frequency.value = VF['_'][i];
+      f.Q.value         = VF['_'][i] / FB[i];
+      return f;
     });
 
-    require(['vs/editor/editor.main'], function () {
-      let editor = monaco.editor.create(document.getElementById('editor'), {
-        value: [
-          'function hello() {',
-          '\tconsole.log("Hello, world!");',
-          '}',
-          '',
-          'hello();'
-        ].join('\n'),
-        language: 'javascript',
-        theme: 'vs-dark',
-        automaticLayout: true
-      });
+    // ── Sum & compress ──────────────────────────────────
+    const sum  = ac.createGain();
+    sum.gain.value = 2.2;
 
-      // 値を取得する例
-      window.getCode = () => {
-        console.log(editor.getValue());
-      };
-document.getElementById("open").onclick = async () => {
-  const [handle] = await window.showOpenFilePicker();
-  const file = await handle.getFile();
-const ext = file.name.split('.').pop();
-let lang = extto[ext];
-monaco.editor.setModelLanguage(editor.getModel(), lang);
-  const text = await file.text();
-  console.log(text);
-  editor.setValue(text);
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -22;
+    comp.knee.value      = 8;
+    comp.ratio.value     = 6;
+    comp.attack.value    = 0.003;
+    comp.release.value   = 0.12;
 
-};
-document.addEventListener("keydown", async(e) => {
-    if (e.ctrlKey && e.key === "s") {
-        e.preventDefault(); // ブラウザの保存を止める
-        console.log("Ctrl + S が押された！");
-        const handle = await window.showSaveFilePicker();
-  const writable = await handle.createWritable();
-let text = editor.getValue();
-console.log(text);
-   await writable.write(text);
-   await writable.close();
+    // ── Analyser ────────────────────────────────────────
+    const analyser = ac.createAnalyser();
+    analyser.fftSize             = 2048;
+    analyser.smoothingTimeConstant = 0.78;
+
+    const master = ac.createGain();
+    master.gain.value = 0.9;
+
+    // ── Routing ─────────────────────────────────────────
+    osc.connect(vGain);
+    noise.connect(nGain);
+
+    vGain.connect(preEmph);
+    nGain.connect(fricBP);
+
+    fmts.forEach(f => {
+      preEmph.connect(f);
+      fricBP.connect(f);
+      f.connect(sum);
+    });
+
+    sum.connect(comp);
+    comp.connect(analyser);
+    analyser.connect(master);
+    master.connect(ac.destination);
+
+    osc.start();
+    noise.start();
+
+    return { osc, vGain, nGain, fricBP, fmts, master };
+  }
+
+  async synthesize(morae, opts, onMora) {
+    // tear down any previous context
+    if (this.ac) { this.ac.close(); this.ac = null; }
+    this.ac      = new AudioContext();
+    this.running = true;
+
+    const ac  = this.ac;
+    const { osc, vGain, nGain, fricBP, fmts, master } = this._buildGraph(ac);
+
+    // Analyser reference for visualizer
+    this.analyser = fmts[0]; // reuse path; actually grab from comp→analyser chain
+    // Rebuild reference properly
+    {
+      let n = fmts[0];
+      while (n._analyserRef) n = n._analyserRef;
     }
+    // Grab the analyser that was set up inside _buildGraph
+    // We need to expose it - let's rebuild with a stored ref
+    // Already stored via analyser → rebuild:
+    this._rebuildAnalyser(ac);
+
+    master.gain.value = opts.volume;
+    osc.frequency.value = opts.f0;
+    this.currentF0 = opts.f0;
+
+    const spd   = opts.speed;
+    const mDur  = opts.moraDur / spd / 1000;   // seconds per mora
+
+    // Helper: smoothly move formant filters to vowel shape
+    const setFmts = (vwl, t, ramp = 0.025) => {
+      const F = VF[vwl] || VF['_'];
+      fmts.forEach((f, i) => {
+        f.frequency.cancelScheduledValues(t);
+        f.frequency.setValueAtTime(f.frequency.value, t);
+        f.frequency.linearRampToValueAtTime(F[i], t + ramp);
+        f.Q.setValueAtTime(F[i] / FB[i], t);
+      });
+      this.currentFormants = [...F];
+    };
+
+    // Initialize to neutral
+    let t = ac.currentTime + 0.04;
+    setFmts('_', t, 0.001);
+
+    let prevVowel   = 'a';
+    const timestamps = [];
+
+    for (let mi = 0; mi < morae.length; mi++) {
+      const mora = morae[mi];
+      timestamps.push(t);
+
+      const cp   = CP[mora.c] || CP[''];
+      const vowel = mora.v || prevVowel;
+      const cDur  = cp.dur / spd;
+
+      // Pitch declination (natural downslope over utterance)
+      const pitchMult = 1 - (mi / Math.max(morae.length, 1)) * 0.1;
+      osc.frequency.setValueAtTime(opts.f0 * pitchMult, t);
+
+      // ── Consonant Phase ────────────────────────────────
+
+      if (cp.type === 'silent') {
+        vGain.gain.cancelScheduledValues(t);
+        nGain.gain.cancelScheduledValues(t);
+        vGain.gain.setValueAtTime(0, t);
+        nGain.gain.setValueAtTime(0, t);
+        t += cp.dur / spd;
+        continue;
+      }
+
+      if (cp.type === 'stop' || mora.c === 'Q') {
+        // Closure: complete silence
+        vGain.gain.cancelScheduledValues(t); vGain.gain.setValueAtTime(0, t);
+        nGain.gain.cancelScheduledValues(t); nGain.gain.setValueAtTime(0, t);
+        t += cDur;
+        if (mora.c !== 'Q') {
+          // Release burst: filtered noise
+          fricBP.frequency.setValueAtTime(cp.ff || 3000, t);
+          fricBP.Q.setValueAtTime(cp.fq || 0.9, t);
+          nGain.gain.setValueAtTime(0.9, t);
+          nGain.gain.linearRampToValueAtTime(0, t + 0.028);
+          t += 0.028;
+        }
+      }
+
+      else if (cp.type === 'vstop') {
+        // Voiced stop: weak voicing during closure, burst
+        vGain.gain.cancelScheduledValues(t); vGain.gain.setValueAtTime(0.08, t);
+        nGain.gain.cancelScheduledValues(t); nGain.gain.setValueAtTime(0.18, t);
+        fricBP.frequency.setValueAtTime(cp.ff || 2000, t);
+        t += cDur;
+        nGain.gain.linearRampToValueAtTime(0, t + 0.02);
+        t += 0.02;
+      }
+
+      else if (cp.type === 'fric' || cp.type === 'vfric') {
+        fricBP.frequency.cancelScheduledValues(t);
+        fricBP.frequency.setValueAtTime(cp.ff || 4000, t);
+        fricBP.Q.setValueAtTime(cp.fq || 1.3, t);
+        vGain.gain.cancelScheduledValues(t); vGain.gain.setValueAtTime(cp.voiced * 0.28, t);
+        nGain.gain.cancelScheduledValues(t); nGain.gain.setValueAtTime(cp.noise  * 0.5,  t);
+        t += cDur;
+        nGain.gain.linearRampToValueAtTime(0, t + 0.022);
+      }
+
+      else if (cp.type === 'nasal') {
+        setFmts('N', t, 0.018);
+        vGain.gain.cancelScheduledValues(t); vGain.gain.setValueAtTime(0.55, t);
+        nGain.gain.cancelScheduledValues(t); nGain.gain.setValueAtTime(0,    t);
+        t += cDur;
+      }
+
+      else if (cp.type === 'approx') {
+        // Approximants: smooth glide — light voicing
+        vGain.gain.cancelScheduledValues(t); vGain.gain.setValueAtTime(0.42, t);
+        nGain.gain.cancelScheduledValues(t); nGain.gain.setValueAtTime(0,    t);
+        t += cDur;
+      }
+
+      else if (cp.type === 'affc') {
+        // Affricate = stop closure + fricative release
+        vGain.gain.cancelScheduledValues(t); vGain.gain.setValueAtTime(0, t);
+        nGain.gain.cancelScheduledValues(t); nGain.gain.setValueAtTime(0, t);
+        t += cDur * 0.38;
+        fricBP.frequency.setValueAtTime(cp.ff || 4000, t);
+        fricBP.Q.setValueAtTime(cp.fq || 1.4, t);
+        nGain.gain.setValueAtTime(0.75, t);
+        nGain.gain.linearRampToValueAtTime(0.12, t + cDur * 0.62);
+        t += cDur * 0.62;
+      }
+
+      // ── Vowel / Sonorant Phase ─────────────────────────
+
+      // 長音符
+      if (mora.c === ':') {
+        setFmts(prevVowel, t, 0.012);
+        vGain.gain.cancelScheduledValues(t); vGain.gain.setValueAtTime(0.82, t);
+        vGain.gain.linearRampToValueAtTime(0.35, t + mDur * 0.88);
+        vGain.gain.linearRampToValueAtTime(0, t + mDur);
+        t += mDur;
+        continue;
+      }
+
+      // 撥音「ん」(vowel-less nasal)
+      if (!mora.v) {
+        if (mora.c === 'N') {
+          setFmts('N', t, 0.015);
+          vGain.gain.cancelScheduledValues(t);
+          vGain.gain.setValueAtTime(0.72, t);
+          vGain.gain.linearRampToValueAtTime(0.12, t + mDur * 0.9);
+          vGain.gain.linearRampToValueAtTime(0, t + mDur);
+          t += mDur;
+        }
+        continue;
+      }
+
+      // Normal vowel
+      const transRamp = (cp.type === 'none' || cp.type === 'approx') ? 0.048 : 0.024;
+      setFmts(vowel, t, transRamp);
+
+      vGain.gain.cancelScheduledValues(t);
+      vGain.gain.setValueAtTime(vGain.gain.value, t);
+      vGain.gain.linearRampToValueAtTime(0.9, t + 0.014);
+      nGain.gain.cancelScheduledValues(t + 0.005);
+      nGain.gain.linearRampToValueAtTime(0, t + 0.028);
+
+      // Sustain → Release
+      vGain.gain.setValueAtTime(0.9, t + mDur * 0.68);
+      vGain.gain.linearRampToValueAtTime(0.38, t + mDur);
+
+      t += mDur;
+      prevVowel = vowel;
+    }
+
+    // Final fade
+    vGain.gain.cancelScheduledValues(t);
+    vGain.gain.linearRampToValueAtTime(0, t + 0.07);
+    nGain.gain.cancelScheduledValues(t);
+    nGain.gain.linearRampToValueAtTime(0, t + 0.04);
+
+    const totalMs = (t - ac.currentTime + 0.15) * 1000;
+
+    // Fire mora callbacks
+    timestamps.forEach((st, i) => {
+      const delay = Math.max(0, (st - ac.currentTime) * 1000 - 10);
+      setTimeout(() => { if (this.running) onMora(i); }, delay);
+    });
+
+    return new Promise(resolve => {
+      setTimeout(() => { this.running = false; resolve(); }, totalMs);
+    });
+  }
+
+  _rebuildAnalyser(ac) {
+    // We stored the analyser inside _buildGraph but didn't expose it.
+    // Patch: create a tap AnalyserNode connected to destination input.
+    // Since we can't easily rewire, we'll create a parallel analyser.
+    const analyser = ac.createAnalyser();
+    analyser.fftSize             = 2048;
+    analyser.smoothingTimeConstant = 0.8;
+    // Connect destination to analyser via MediaStreamDestination isn't needed—
+    // instead we just expose a dummy analyser and update it separately.
+    // Simpler: store the analyser reference as a property set by _buildGraph override.
+    this.analyser = null; // will be set below
+    this._analyserNode = analyser;
+    ac.destination.connect && null; // can't tap destination in Web Audio easily
+    // Better solution: keep a reference from _buildGraph directly.
+  }
+
+  stop() {
+    this.running = false;
+    if (this.ac) { this.ac.close(); this.ac = null; }
+    this.analyser = null;
+    this._analyserNode = null;
+    this.currentFormants = [0,0,0];
+    this.currentF0 = 0;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Rebuild engine with proper analyser exposure
+// ═══════════════════════════════════════════════════════
+
+class FormantSynth extends FormantEngine {
+  _buildGraph(ac) {
+    const nodes = super._buildGraph(ac);
+    // Expose the analyser: we need to find it in the chain.
+    // Rebuild: insert a tap analyser between comp and master.
+    // Since super already wired everything, let's create a 2nd tap.
+    const tap = ac.createAnalyser();
+    tap.fftSize             = 2048;
+    tap.smoothingTimeConstant = 0.78;
+    // Route: sum → comp → tap → master → dest
+    // (super already did sum→comp→analyser→master→dest, but analyser isn't stored)
+    // We'll disconnect and rewire. Simpler: create gain tap before master.
+    // Actually, safest: create a separate analyser connected directly to destination.
+    // We use a ScriptProcessor trick or just create a separate gain branch.
+    const splitter = ac.createGain();
+    splitter.gain.value = 1;
+    nodes.fmts.forEach(f => f.connect(splitter));
+    splitter.connect(tap);
+    this.analyser = tap;
+    return nodes;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// ④  UI WIRING
+// ═══════════════════════════════════════════════════════
+
+const engine = new FormantSynth();
+
+const elText    = document.getElementById('textIn');
+const elSpeak   = document.getElementById('btnSpeak');
+const elStop    = document.getElementById('btnStop');
+const elLed     = document.getElementById('led');
+const elStatus  = document.getElementById('statusTxt');
+const elMInfo   = document.getElementById('moraInfo');
+const elMPanel  = document.getElementById('moraPanel');
+
+// Sliders
+const sliderDefs = [
+  { id:'sF0',  vi:'vF0',  fmt: v => `${Math.round(v)}Hz` },
+  { id:'sSpd', vi:'vSpd', fmt: v => `${(+v).toFixed(2)}×` },
+  { id:'sVol', vi:'vVol', fmt: v => `${(+v).toFixed(2)}` },
+  { id:'sDur', vi:'vDur', fmt: v => `${Math.round(v)}ms` },
+];
+sliderDefs.forEach(({ id, vi, fmt }) => {
+  const sl = document.getElementById(id);
+  const vl = document.getElementById(vi);
+  vl.textContent = fmt(sl.value);
+  sl.addEventListener('input', () => { vl.textContent = fmt(sl.value); });
 });
 
-function runSave() {
-   
+// ─── Mora chip builder ────────────────────────────────
+function buildChips(morae) {
+  elMPanel.innerHTML = '';
+  if (!morae.length) {
+    elMPanel.innerHTML = '<span class="mora-empty">テキストを入力 → 合成開始</span>';
+    return;
+  }
+  morae.forEach((m, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'mora-chip';
+    chip.id = `chip${i}`;
+    const phon = m.v ? `${m.c}/${m.v}` : (m.c || '—');
+    chip.innerHTML = `<span class="mora-glyph">${m.glyph}</span><span class="mora-phon">${phon}</span>`;
+    elMPanel.appendChild(chip);
+  });
 }
-    });
 
-  </script>
-  </body>
+function activateMora(i, total) {
+  document.querySelectorAll('.mora-chip').forEach((c, j) => {
+    c.classList.toggle('active', j === i);
+    c.classList.toggle('done',   j < i);
+  });
+  const ch = document.getElementById(`chip${i}`);
+  if (ch) ch.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function resetChips() {
+  document.querySelectorAll('.mora-chip').forEach(c => {
+    c.classList.remove('active', 'done');
+  });
+}
+
+// ─── Speak / Stop ─────────────────────────────────────
+async function speak() {
+  const text = elText.value.trim();
+  if (!text) return;
+
+  engine.stop();
+
+  const morae = parseText(text);
+  if (!morae.length) return;
+
+  buildChips(morae);
+
+  const f0     = +document.getElementById('sF0').value;
+  const speed  = +document.getElementById('sSpd').value;
+  const volume = +document.getElementById('sVol').value;
+  const moraDur = +document.getElementById('sDur').value;
+
+  const totalSec = (morae.length * moraDur / speed / 1000 + 0.5).toFixed(1);
+  elMInfo.textContent = `${morae.length} MORA · ${totalSec}s`;
+
+  elSpeak.disabled = true;
+  elStop.disabled  = false;
+  elLed.className  = 'led on';
+  elStatus.textContent = 'SYNTHESIZING';
+
+  await engine.synthesize(morae, { f0, speed, volume, moraDur }, (i) => {
+    activateMora(i, morae.length);
+  });
+
+  elSpeak.disabled = false;
+  elStop.disabled  = true;
+  elLed.className  = 'led';
+  elStatus.textContent = 'COMPLETE';
+  resetChips();
+}
+
+function stop() {
+  engine.stop();
+  elSpeak.disabled = false;
+  elStop.disabled  = true;
+  elLed.className  = 'led';
+  elStatus.textContent = 'STOPPED';
+  resetChips();
+}
+
+elSpeak.addEventListener('click', speak);
+elStop.addEventListener('click', stop);
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') speak();
+  if (e.key === 'Escape') stop();
+});
+
+// ═══════════════════════════════════════════════════════
+// ⑤  VISUALIZER
+// ═══════════════════════════════════════════════════════
+
+const wCvs = document.getElementById('wCanvas');
+const sCvs = document.getElementById('sCanvas');
+const wCtx = wCvs.getContext('2d');
+const sCtx = sCvs.getContext('2d');
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  [wCvs, sCvs].forEach(c => {
+    c.width  = c.offsetWidth  * dpr;
+    c.height = c.offsetHeight * dpr;
+  });
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Formant meter displays
+const f1m = document.getElementById('f1meter');
+const f2m = document.getElementById('f2meter');
+const f3m = document.getElementById('f3meter');
+const f1d = document.getElementById('f1disp');
+const f2d = document.getElementById('f2disp');
+const f3d = document.getElementById('f3disp');
+const f0d = document.getElementById('f0disp');
+const rmsD = document.getElementById('rmsDisplay');
+
+let raf;
+function draw() {
+  raf = requestAnimationFrame(draw);
+  const dpr  = window.devicePixelRatio || 1;
+  const W    = wCvs.width, H = wCvs.height;
+  const SW   = sCvs.width, SH = sCvs.height;
+
+  // ── Oscilloscope ──────────────────────────────────────
+  wCtx.clearRect(0, 0, W, H);
+  wCtx.fillStyle = '#020c10';
+  wCtx.fillRect(0, 0, W, H);
+
+  // Grid
+  wCtx.strokeStyle = 'rgba(0,80,100,0.4)';
+  wCtx.lineWidth = 1;
+  for (let gx = 0; gx <= 4; gx++) {
+    const x = W * gx / 4;
+    wCtx.beginPath(); wCtx.moveTo(x, 0); wCtx.lineTo(x, H); wCtx.stroke();
+  }
+  for (let gy = 0; gy <= 2; gy++) {
+    const y = H * gy / 2;
+    wCtx.beginPath(); wCtx.moveTo(0, y); wCtx.lineTo(W, y); wCtx.stroke();
+  }
+
+  const analyser = engine.analyser;
+  if (analyser) {
+    const timeBuf = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(timeBuf);
+
+    // RMS
+    let sum = 0;
+    for (let i = 0; i < timeBuf.length; i++) sum += timeBuf[i] * timeBuf[i];
+    const rms = Math.sqrt(sum / timeBuf.length);
+    rmsD.textContent = `RMS: ${(rms * 100).toFixed(1)}%`;
+
+    // Draw waveform
+    const step = Math.max(1, Math.floor(timeBuf.length / (W / dpr)));
+    wCtx.beginPath();
+    wCtx.strokeStyle = '#00e5ff';
+    wCtx.lineWidth   = 1.5 * dpr;
+    wCtx.shadowColor = '#00e5ff';
+    wCtx.shadowBlur  = 5;
+    for (let px = 0; px < W; px++) {
+      const idx = Math.floor((px / W) * timeBuf.length);
+      const v   = timeBuf[idx] || 0;
+      const y   = (0.5 - v * 0.42) * H;
+      px === 0 ? wCtx.moveTo(px, y) : wCtx.lineTo(px, y);
+    }
+    wCtx.stroke();
+    wCtx.shadowBlur = 0;
+  } else {
+    rmsD.textContent = 'RMS: —';
+    // Idle flat line with noise
+    wCtx.beginPath();
+    wCtx.strokeStyle = 'rgba(0,229,255,0.18)';
+    wCtx.lineWidth = 1;
+    for (let px = 0; px < W; px++) {
+      const y = H/2 + (Math.random() - 0.5) * 1.5;
+      px === 0 ? wCtx.moveTo(px, y) : wCtx.lineTo(px, y);
+    }
+    wCtx.stroke();
+  }
+
+  // ── Spectrum ──────────────────────────────────────────
+  sCtx.clearRect(0, 0, SW, SH);
+  sCtx.fillStyle = '#020c10';
+  sCtx.fillRect(0, 0, SW, SH);
+
+  if (analyser) {
+    const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(freqBuf);
+
+    // Only display 0–8kHz  (~half the bins at 44.1kHz)
+    const maxBin  = Math.floor(freqBuf.length * 8000 / (analyser.context.sampleRate * 0.5));
+    const barW    = SW / maxBin;
+    for (let bi = 0; bi < maxBin; bi++) {
+      const v = freqBuf[bi] / 255;
+      const bh = v * SH;
+      // Colour: cyan → green → yellow at high amplitudes
+      const hue = 185 - v * 65;
+      const lit = 15 + v * 55;
+      sCtx.fillStyle = `hsl(${hue},100%,${lit}%)`;
+      sCtx.fillRect(bi * barW, SH - bh, Math.max(1, barW - 0.5), bh);
+    }
+
+    // Formant marker lines
+    const sr  = analyser.context.sampleRate;
+    const hzPerBin = (sr / 2) / analyser.frequencyBinCount;
+    const maxHz    = 8000;
+    engine.currentFormants.forEach((hz, i) => {
+      if (!hz) return;
+      const x = (hz / maxHz) * SW;
+      const colors = ['#00e5ff','#00ffaa','#ffcc00'];
+      sCtx.strokeStyle = colors[i];
+      sCtx.lineWidth   = 1.5 * dpr;
+      sCtx.setLineDash([3, 3]);
+      sCtx.beginPath(); sCtx.moveTo(x, 0); sCtx.lineTo(x, SH); sCtx.stroke();
+      sCtx.setLineDash([]);
+    });
+  } else {
+    // Idle: flat baseline
+    sCtx.strokeStyle = 'rgba(0,100,120,0.3)';
+    sCtx.lineWidth = 1;
+    sCtx.beginPath(); sCtx.moveTo(0, SH - 1); sCtx.lineTo(SW, SH - 1); sCtx.stroke();
+  }
+
+  // ── Formant meters UI ────────────────────────────────
+  const [ff1, ff2, ff3] = engine.currentFormants;
+  f1d.textContent = ff1 ? `${Math.round(ff1)}Hz` : '— Hz';
+  f2d.textContent = ff2 ? `${Math.round(ff2)}Hz` : '— Hz';
+  f3d.textContent = ff3 ? `${Math.round(ff3)}Hz` : '— Hz';
+  f0d.textContent = engine.currentF0 ? `${Math.round(engine.currentF0)}Hz` : '— Hz';
+  f1m.style.setProperty('--pct', ff1 ? `${(ff1 / 1200) * 100}%` : '0%');
+  f2m.style.setProperty('--pct', ff2 ? `${(ff2 / 3000) * 100}%` : '0%');
+  f3m.style.setProperty('--pct', ff3 ? `${(ff3 / 3500) * 100}%` : '0%');
+}
+
+draw();
+</script>
+</body>
 </html>
