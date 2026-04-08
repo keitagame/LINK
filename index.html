@@ -40,6 +40,7 @@ height:89vh;
   background-color: #555;
 }
 button{
+font-size:10px;
 background:none;
 border:none;
 color:white;
@@ -59,12 +60,7 @@ color:white;
   <div id="editor"></div>
 <div style="background:teal; width:100vw; height:40px;"></div>
 <script>
-document.getElementById("open").onclick = async () => {
-  const [handle] = await window.showOpenFilePicker();
-  const file = await handle.getFile();
-  const text = await file.text();
-  console.log(text);
-};
+
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
   <script>
@@ -75,7 +71,7 @@ document.getElementById("open").onclick = async () => {
     });
 
     require(['vs/editor/editor.main'], function () {
-      const editor = monaco.editor.create(document.getElementById('editor'), {
+      let editor = monaco.editor.create(document.getElementById('editor'), {
         value: [
           'function hello() {',
           '\tconsole.log("Hello, world!");',
@@ -92,7 +88,16 @@ document.getElementById("open").onclick = async () => {
       window.getCode = () => {
         console.log(editor.getValue());
       };
+document.getElementById("open").onclick = async () => {
+  const [handle] = await window.showOpenFilePicker();
+  const file = await handle.getFile();
+  const text = await file.text();
+  console.log(text);
+  editor.setValue(text);
+
+};
     });
+
   </script>
   </body>
 </html>
