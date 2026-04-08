@@ -96,6 +96,22 @@ document.getElementById("open").onclick = async () => {
   editor.setValue(text);
 
 };
+document.addEventListener("keydown", async(e) => {
+    if (e.ctrlKey && e.key === "s") {
+        e.preventDefault(); // ブラウザの保存を止める
+        console.log("Ctrl + S が押された！");
+        const handle = await window.showSaveFilePicker();
+  const writable = await handle.createWritable();
+let text = editor.getValue();
+console.log(text);
+   await writable.write(text);
+   await writable.close();
+    }
+});
+
+function runSave() {
+   
+}
     });
 
   </script>
